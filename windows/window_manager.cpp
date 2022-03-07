@@ -22,6 +22,8 @@
 #define STATE_MINIMIZED 2
 #define STATE_FULLSCREEN_ENTERED 3
 
+#define DWMWA_USE_IMMERSIVE_DARK_MODE 19
+
 namespace {
 class WindowManager {
  public:
@@ -48,6 +50,7 @@ class WindowManager {
   HWND GetMainWindow();
   void WindowManager::SetAsFrameless();
   void WindowManager::WaitUntilReadyToShow();
+  void WindowManager::Destroy();
   void WindowManager::Close();
   bool WindowManager::IsPreventClose();
   void WindowManager::SetPreventClose(const flutter::EncodableMap& args);
@@ -92,6 +95,7 @@ class WindowManager {
   void WindowManager::SetHasShadow(const flutter::EncodableMap& args);
   double WindowManager::GetOpacity();
   void WindowManager::SetOpacity(const flutter::EncodableMap& args);
+  void WindowManager::SetBrightness(const flutter::EncodableMap& args);
   void WindowManager::StartDragging();
   void WindowManager::StartResizing(const flutter::EncodableMap& args);
   flutter::EncodableMap WindowManager::GetPrimaryDisplay(
@@ -99,6 +103,7 @@ class WindowManager {
 
  private:
   bool g_is_window_fullscreen = false;
+  std::string g_title_bar_style_before_fullscreen;
   RECT g_frame_before_fullscreen;
   bool g_maximized_before_fullscreen;
   LONG g_style_before_fullscreen;
@@ -141,6 +146,10 @@ void WindowManager::SetAsFrameless() {
 }
 
 void WindowManager::WaitUntilReadyToShow() {}
+
+void WindowManager::Destroy() {
+  PostQuitMessage(0);
+}
 
 void WindowManager::Close() {
   HWND hWnd = GetMainWindow();
@@ -280,9 +289,15 @@ void WindowManager::SetFullScreen(const flutter::EncodableMap& args) {
     g_style_before_fullscreen = GetWindowLong(mainWindow, GWL_STYLE);
     g_ex_style_before_fullscreen = GetWindowLong(mainWindow, GWL_EXSTYLE);
     ::GetWindowRect(mainWindow, &g_frame_before_fullscreen);
+    g_title_bar_style_before_fullscreen = title_bar_style_;
   }
 
   if (isFullScreen) {
+    flutter::EncodableMap args2 = flutter::EncodableMap();
+    args2[flutter::EncodableValue("titleBarStyle")] =
+        flutter::EncodableValue("default");
+    SetTitleBarStyle(args2);
+
     // Set new window style and size.
     ::SetWindowLong(mainWindow, GWL_STYLE,
                     g_style_before_fullscreen & ~(WS_CAPTION | WS_THICKFRAME));
@@ -302,6 +317,11 @@ void WindowManager::SetFullScreen(const flutter::EncodableMap& args) {
                    SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
     ::SendMessage(mainWindow, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
   } else {
+    flutter::EncodableMap args2 = flutter::EncodableMap();
+    args2[flutter::EncodableValue("titleBarStyle")] =
+        flutter::EncodableValue(g_title_bar_style_before_fullscreen);
+    SetTitleBarStyle(args2);
+
     ::SetWindowLong(mainWindow, GWL_STYLE, g_style_before_fullscreen);
     ::SetWindowLong(mainWindow, GWL_EXSTYLE, g_ex_style_before_fullscreen);
 
@@ -601,6 +621,17 @@ void WindowManager::SetOpacity(const flutter::EncodableMap& args) {
   SetWindowLong(hWnd, GWL_EXSTYLE, gwlExStyle | WS_EX_LAYERED);
   SetLayeredWindowAttributes(hWnd, 0, static_cast<int8_t>(255 * opacity_),
                              0x02);
+}
+
+void WindowManager::SetBrightness(const flutter::EncodableMap& args) {
+  std::string brightness =
+      std::get<std::string>(args.at(flutter::EncodableValue("brightness")));
+
+  const BOOL is_dark_mode = brightness == "dark";
+
+  HWND hWnd = GetMainWindow();
+  DwmSetWindowAttribute(hWnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &is_dark_mode,
+                        sizeof(is_dark_mode));
 }
 
 void WindowManager::StartDragging() {

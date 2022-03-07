@@ -56,6 +56,10 @@ public class WindowManagerPlugin: NSObject, FlutterPlugin {
             windowManager.setAsFrameless()
             result(true)
             break
+        case "destroy":
+            windowManager.destroy()
+            result(true)
+            break
         case "close":
             windowManager.close()
             result(true)
@@ -217,6 +221,10 @@ public class WindowManagerPlugin: NSObject, FlutterPlugin {
             break
         case "setOpacity":
             windowManager.setOpacity(args)
+            result(true)
+            break
+        case "setBrightness":
+            windowManager.setBrightness(args)
             result(true)
             break
         case "startDragging":

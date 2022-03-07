@@ -4,7 +4,10 @@ import 'package:bot_toast/bot_toast.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:preference_list/preference_list.dart';
+import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
+
+import '../utilities/utilities.dart';
 
 const _kSizes = [
   Size(400, 400),
@@ -27,7 +30,7 @@ class HomePage extends StatefulWidget {
   _HomePageState createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with WindowListener {
+class _HomePageState extends State<HomePage> with TrayListener, WindowListener {
   bool _isPreventClose = false;
   Size _size = _kSizes.first;
   Size? _minSize;
@@ -45,6 +48,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
 
   @override
   void initState() {
+    trayManager.addListener(this);
     windowManager.addListener(this);
     _init();
     super.initState();
@@ -52,17 +56,56 @@ class _HomePageState extends State<HomePage> with WindowListener {
 
   @override
   void dispose() {
+    trayManager.removeListener(this);
     windowManager.removeListener(this);
     super.dispose();
   }
 
   void _init() async {
+    await trayManager.setIcon(
+      Platform.isWindows
+          ? 'images/tray_icon_original.ico'
+          : 'images/tray_icon_original.png',
+    );
+    List<MenuItem> items = [
+      MenuItem(
+        key: 'show_window',
+        title: 'Show Window',
+      ),
+      MenuItem.separator,
+      MenuItem(
+        key: 'exit_app',
+        title: 'Exit App',
+      ),
+    ];
+    await trayManager.setContextMenu(items);
     setState(() {});
   }
 
   Widget _buildBody(BuildContext context) {
     return PreferenceList(
       children: <Widget>[
+        PreferenceListSection(
+          children: [
+            PreferenceListItem(
+              title: Text('ThemeMode'),
+              detailText: Text('${sharedConfig.themeMode}'),
+              onTap: () async {
+                ThemeMode newThemeMode =
+                    sharedConfig.themeMode == ThemeMode.light
+                        ? ThemeMode.dark
+                        : ThemeMode.light;
+
+                await sharedConfigManager.setThemeMode(newThemeMode);
+                await windowManager.setBrightness(
+                  newThemeMode == ThemeMode.light
+                      ? Brightness.light
+                      : Brightness.dark,
+                );
+              },
+            ),
+          ],
+        ),
         PreferenceListSection(
           title: Text('METHODS'),
           children: [
@@ -664,8 +707,12 @@ class _HomePageState extends State<HomePage> with WindowListener {
             // ],
           ),
           child: Scaffold(
-            appBar: AppBar(
-              title: const Text("window_manager_example"),
+            appBar: PreferredSize(
+              child: WindowCaption(
+                brightness: Theme.of(context).brightness,
+                title: Text('window_manager_example'),
+              ),
+              preferredSize: const Size.fromHeight(kWindowCaptionHeight),
             ),
             body: Column(
               children: [
@@ -727,6 +774,11 @@ class _HomePageState extends State<HomePage> with WindowListener {
   }
 
   @override
+  void onTrayIconMouseDown() {
+    windowManager.show();
+  }
+
+  @override
   void onWindowFocus() {
     setState(() {});
   }
@@ -750,7 +802,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
                 child: Text('Yes'),
                 onPressed: () {
                   Navigator.of(context).pop();
-                  exit(0);
+                  windowManager.destroy();
                 },
               ),
             ],

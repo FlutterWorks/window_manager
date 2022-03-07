@@ -27,15 +27,15 @@
       - [监听事件](#监听事件)
       - [关闭时退出](#关闭时退出)
         - [macOS](#macos)
-        - [Windows](#windows)
       - [关闭前确认](#关闭前确认)
       - [在启动时隐藏](#在启动时隐藏)
         - [macOS](#macos-1)
-        - [Windows](#windows-1)
+        - [Windows](#windows)
   - [谁在用使用它？](#谁在用使用它)
   - [API](#api)
     - [WindowManager](#windowmanager)
       - [Methods](#methods)
+        - [destroy  `macos`  `windows`](#destroy--macos--windows)
         - [close](#close)
         - [isPreventClose](#ispreventclose)
         - [setPreventClose](#setpreventclose)
@@ -118,7 +118,7 @@
 
 ```yaml
 dependencies:
-  window_manager: ^0.1.6
+  window_manager: ^0.1.9
 ```
 
 或
@@ -271,24 +271,6 @@ class AppDelegate: FlutterAppDelegate {
 }
 ```
 
-##### Windows
-
-更改文件 `windows/runner/main.cpp` 如下：
-
-```diff
-int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
-                      _In_ wchar_t *command_line, _In_ int show_command) {
-  // ...
-
--  window.SetQuitOnClose(true);
-+  window.SetQuitOnClose(false);
-
-  // ...
-
-  return EXIT_SUCCESS;
-}
-```
-
 #### 关闭前确认
 
 ```dart
@@ -304,19 +286,20 @@ class _HomePageState extends State<HomePage> with WindowListener {
   @override
   void initState() {
     windowManager.addListener(this);
+    _init();
     super.initState();
-  }
-
-  void _init() async {
-    // 添加此行以覆盖默认关闭处理程序
-    await windowManager.setPreventClose(true);
-    setState(() {});
   }
 
   @override
   void dispose() {
     windowManager.removeListener(this);
     super.dispose();
+  }
+
+  void _init() async {
+    // 添加此行以覆盖默认关闭处理程序
+    await windowManager.setPreventClose(true);
+    setState(() {});
   }
 
   @override
@@ -344,7 +327,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
                 child: Text('Yes'),
                 onPressed: () {
                   Navigator.of(context).pop();
-                  exit(0);
+                  await windowManager.destroy();
                 },
               ),
             ],
@@ -451,6 +434,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
 - [BlueBubbles](https://github.com/BlueBubblesApp/bluebubbles-app) - BlueBubbles is an ecosystem of apps bringing iMessage to Android, Windows, and Linux
 - [Yukino](https://github.com/yukino-app/yukino/tree/flutter-rewrite) - Yukino lets you read manga or stream anime ad-free from multiple sources.
 - [LunaSea](https://github.com/CometTools/LunaSea) - A self-hosted controller for mobile and macOS built using the Flutter framework.
+- [Linwood Butterfly](https://github.com/LinwoodCloud/Butterfly) - 用 Flutter 编写的开源笔记应用
 
 ## API
 
@@ -458,6 +442,11 @@ class _HomePageState extends State<HomePage> with WindowListener {
 ### WindowManager
 
 #### Methods
+
+##### destroy  `macos`  `windows`
+
+Force closing the window.
+
 
 ##### close
 

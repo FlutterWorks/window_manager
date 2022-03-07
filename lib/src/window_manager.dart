@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
@@ -90,6 +91,13 @@ class WindowManager {
 
   Future<void> waitUntilReadyToShow() async {
     await _channel.invokeMethod('waitUntilReadyToShow');
+  }
+
+  /// Force closing the window.
+  ///
+  /// @platforms macos,windows
+  Future<void> destroy() async {
+    await _channel.invokeMethod('destroy');
   }
 
   /// Try to close the window.
@@ -540,6 +548,16 @@ class WindowManager {
       'opacity': opacity,
     };
     await _channel.invokeMethod('setOpacity', arguments);
+  }
+
+  /// Sets the brightness of the window.
+  ///
+  /// @platforms macos,windows
+  Future<void> setBrightness(Brightness brightness) async {
+    final Map<String, dynamic> arguments = {
+      'brightness': brightness.name,
+    };
+    await _channel.invokeMethod('setBrightness', arguments);
   }
 
   /// Starts a window drag based on the specified mouse-down event.
