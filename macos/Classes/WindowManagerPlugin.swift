@@ -130,18 +130,11 @@ public class WindowManagerPlugin: NSObject, FlutterPlugin {
             windowManager.setBackgroundColor(args)
             result(true)
             break
-        case "getPosition":
-            result(windowManager.getPosition())
+        case "getBounds":
+            result(windowManager.getBounds())
             break
-        case "setPosition":
-            windowManager.setPosition(args)
-            result(true)
-            break
-        case "getSize":
-            result(windowManager.getSize())
-            break
-        case "setSize":
-            windowManager.setSize(args)
+        case "setBounds":
+            windowManager.setBounds(args)
             result(true)
             break
         case "setMinimumSize":
@@ -201,6 +194,9 @@ public class WindowManagerPlugin: NSObject, FlutterPlugin {
         case "getTitleBarHeight":
             result(windowManager.getTitleBarHeight())
             break
+        case "isSkipTaskbar":
+            result(windowManager.isSkipTaskbar())
+            break
         case "setSkipTaskbar":
             windowManager.setSkipTaskbar(args)
             result(true)
@@ -227,12 +223,13 @@ public class WindowManagerPlugin: NSObject, FlutterPlugin {
             windowManager.setBrightness(args)
             result(true)
             break
+        case "setIgnoreMouseEvents":
+            windowManager.setIgnoreMouseEvents(args)
+            result(true)
+            break
         case "startDragging":
             windowManager.startDragging()
             result(true)
-            break
-        case "getPrimaryDisplay":
-            result(windowManager.getPrimaryDisplay())
             break
         case "isSubWindow":
             result(windowManager.isSubWindow())

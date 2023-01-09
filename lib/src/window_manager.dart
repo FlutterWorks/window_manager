@@ -1,13 +1,17 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:path/path.dart' as path;
 
+import 'utils/calc_window_position.dart';
 import 'resize_edge.dart';
+import 'title_bar_style.dart';
 import 'window_listener.dart';
+import 'window_options.dart';
 
 const kWindowEventClose = 'close';
 const kWindowEventFocus = 'focus';
@@ -17,7 +21,9 @@ const kWindowEventUnmaximize = 'unmaximize';
 const kWindowEventMinimize = 'minimize';
 const kWindowEventRestore = 'restore';
 const kWindowEventResize = 'resize';
+const kWindowEventResized = 'resized';
 const kWindowEventMove = 'move';
+const kWindowEventMoved = 'moved';
 const kWindowEventEnterFullScreen = 'enter-full-screen';
 const kWindowEventLeaveFullScreen = 'leave-full-screen';
 
@@ -55,7 +61,9 @@ class WindowManager {
         kWindowEventMinimize: listener.onWindowMinimize,
         kWindowEventRestore: listener.onWindowRestore,
         kWindowEventResize: listener.onWindowResize,
+        kWindowEventResized: listener.onWindowResized,
         kWindowEventMove: listener.onWindowMove,
+        kWindowEventMoved: listener.onWindowMoved,
         kWindowEventEnterFullScreen: listener.onWindowEnterFullScreen,
         kWindowEventLeaveFullScreen: listener.onWindowLeaveFullScreen,
       };
@@ -89,13 +97,44 @@ class WindowManager {
     await _channel.invokeMethod('setAsFrameless');
   }
 
-  Future<void> waitUntilReadyToShow() async {
+  /// Wait until ready to show.
+  Future<void> waitUntilReadyToShow([
+    WindowOptions? options,
+    VoidCallback? callback,
+  ]) async {
     await _channel.invokeMethod('waitUntilReadyToShow');
+
+    bool _isFullScreen = await isFullScreen();
+    bool _isMaximized = await isMaximized();
+    bool _isMinimized = await isMinimized();
+
+    if (_isFullScreen) await setFullScreen(false);
+    if (_isMaximized) await unmaximize();
+    if (_isMinimized) await restore();
+
+    if (options?.size != null) await setSize(options!.size!);
+    if (options?.center == true) await setAlignment(Alignment.center);
+    if (options?.minimumSize != null)
+      await setMinimumSize(options!.minimumSize!);
+    if (options?.maximumSize != null)
+      await setMaximumSize(options!.maximumSize!);
+    if (options?.alwaysOnTop != null)
+      await setAlwaysOnTop(options!.alwaysOnTop!);
+    if (options?.fullScreen != null) await setFullScreen(options!.fullScreen!);
+    if (options?.backgroundColor != null)
+      await setBackgroundColor(options!.backgroundColor!);
+    if (options?.skipTaskbar != null)
+      await setSkipTaskbar(options!.skipTaskbar!);
+    if (options?.title != null) await setTitle(options!.title!);
+    if (options?.titleBarStyle != null)
+      await setTitleBarStyle(options!.titleBarStyle!);
+
+    if (callback != null) {
+      callback();
+    }
   }
 
   /// Force closing the window.
-  ///
-  /// @platforms macos,windows
   Future<void> destroy() async {
     await _channel.invokeMethod('destroy');
   }
@@ -165,9 +204,12 @@ class WindowManager {
     return await _channel.invokeMethod('isMaximized');
   }
 
-  /// Maximizes the window.
-  Future<void> maximize() async {
-    await _channel.invokeMethod('maximize');
+  /// Maximizes the window. `vertically` simulates aero snap, only works on Windows
+  Future<void> maximize({bool vertically = false}) async {
+    final Map<String, dynamic> arguments = {
+      'vertically': vertically,
+    };
+    await _channel.invokeMethod('maximize', arguments);
   }
 
   /// Unmaximizes the window.
@@ -222,149 +264,89 @@ class WindowManager {
     await _channel.invokeMethod('setBackgroundColor', arguments);
   }
 
-  /// Returns `Rect` - The bounds of the window as Object.
-  Future<Rect> getBounds() async {
-    Offset position = await getPosition();
-    Size size = await getSize();
-    return Rect.fromLTWH(position.dx, position.dy, size.width, size.height);
-  }
-
-  /// Resizes and moves the window to the supplied bounds.
-  Future<void> setBounds(Rect bounds, {animate = false}) async {
-    await setPosition(bounds.topLeft);
-    await setSize(bounds.size);
-  }
-
-  /// Returns `Offset` - Contains the window's current position.
-  Future<Offset> getPosition() async {
-    final Map<String, dynamic> arguments = {
-      'devicePixelRatio': window.devicePixelRatio,
-    };
-    final Map<dynamic, dynamic> resultData =
-        await _channel.invokeMethod('getPosition', arguments);
-    return Offset(resultData['x'], resultData['y']);
-  }
-
   /// Move the window to a position aligned with the screen.
-  Future<void> setAlignment(Alignment alignment) async {
+  Future<void> setAlignment(
+    Alignment alignment, {
+    bool animate = false,
+  }) async {
     Size windowSize = await getSize();
-    Map<String, dynamic> primaryDisplay = await _getPrimaryDisplay();
-
-    num visibleWidth = primaryDisplay['size']['width'];
-    num visibleHeight = primaryDisplay['size']['height'];
-    num visibleStartY = 0;
-
-    if (primaryDisplay['visibleSize'] != null) {
-      visibleWidth = primaryDisplay['visibleSize']['width'];
-      visibleHeight = primaryDisplay['visibleSize']['height'];
-    }
-    if (primaryDisplay['visiblePosition'] != null) {
-      visibleStartY = primaryDisplay['visiblePosition']['y'];
-    }
-    Offset position = Offset(0, 0);
-
-    if (alignment == Alignment.topLeft) {
-      position = Offset(0, 0);
-    } else if (alignment == Alignment.topCenter) {
-      position = Offset(
-        (visibleWidth / 2) - (windowSize.width / 2),
-        visibleStartY + 0,
-      );
-    } else if (alignment == Alignment.topRight) {
-      position = Offset(
-        visibleWidth - windowSize.width,
-        visibleStartY + 0,
-      );
-    } else if (alignment == Alignment.centerLeft) {
-      position = Offset(
-        0,
-        visibleStartY + ((visibleHeight / 2) - (windowSize.height / 2)),
-      );
-    } else if (alignment == Alignment.center) {
-      position = Offset(
-        (visibleWidth / 2) - (windowSize.width / 2),
-        visibleStartY + ((visibleHeight / 2) - (windowSize.height / 2)),
-      );
-    } else if (alignment == Alignment.centerRight) {
-      position = Offset(
-        visibleWidth - windowSize.width,
-        visibleStartY + ((visibleHeight / 2) - (windowSize.height / 2)),
-      );
-    } else if (alignment == Alignment.bottomLeft) {
-      position = Offset(
-        0,
-        visibleStartY + (visibleHeight - windowSize.height),
-      );
-    } else if (alignment == Alignment.bottomCenter) {
-      position = Offset(
-        (visibleWidth / 2) - (windowSize.width / 2),
-        visibleStartY + (visibleHeight - windowSize.height),
-      );
-    } else if (alignment == Alignment.bottomRight) {
-      position = Offset(
-        visibleWidth - windowSize.width,
-        visibleStartY + (visibleHeight - windowSize.height),
-      );
-    }
-
-    await this.setPosition(position);
+    Offset position = await calcWindowPosition(windowSize, alignment);
+    await this.setPosition(position, animate: animate);
   }
 
   /// Moves window to the center of the screen.
-  Future<void> center() async {
+  Future<void> center({
+    bool animate = false,
+  }) async {
     Size windowSize = await getSize();
-    Map<String, dynamic> primaryDisplay = await _getPrimaryDisplay();
-
-    num visibleWidth = primaryDisplay['size']['width'];
-    num visibleHeight = primaryDisplay['size']['height'];
-    num visibleStartY = 0;
-
-    if (primaryDisplay['visibleSize'] != null) {
-      visibleWidth = primaryDisplay['visibleSize']['width'];
-      visibleHeight = primaryDisplay['visibleSize']['height'];
-    }
-    if (primaryDisplay['visiblePosition'] != null) {
-      visibleStartY = primaryDisplay['visiblePosition']['y'];
-    }
-
-    Offset position = Offset(
-      (visibleWidth / 2) - (windowSize.width / 2),
-      visibleStartY + ((visibleHeight / 2) - (windowSize.height / 2)),
-    );
-
-    await this.setPosition(position);
+    Offset position = await calcWindowPosition(windowSize, Alignment.center);
+    await this.setPosition(position, animate: animate);
   }
 
-  /// Moves window to position.
-  Future<void> setPosition(Offset position, {animate = false}) async {
+  /// Returns `Rect` - The bounds of the window as Object.
+  Future<Rect> getBounds() async {
     final Map<String, dynamic> arguments = {
       'devicePixelRatio': window.devicePixelRatio,
-      'x': position.dx,
-      'y': position.dy,
+    };
+    final Map<dynamic, dynamic> resultData = await _channel.invokeMethod(
+      'getBounds',
+      arguments,
+    );
+
+    return Rect.fromLTWH(
+      resultData['x'],
+      resultData['y'],
+      resultData['width'],
+      resultData['height'],
+    );
+  }
+
+  /// Resizes and moves the window to the supplied bounds.
+  Future<void> setBounds(
+    Rect? bounds, {
+    Offset? position,
+    Size? size,
+    bool animate = false,
+  }) async {
+    final Map<String, dynamic> arguments = {
+      'devicePixelRatio': window.devicePixelRatio,
+      'x': bounds?.topLeft.dx ?? position?.dx,
+      'y': bounds?.topLeft.dy ?? position?.dy,
+      'width': bounds?.size.width ?? size?.width,
+      'height': bounds?.size.height ?? size?.height,
       'animate': animate,
     }..removeWhere((key, value) => value == null);
-    await _channel.invokeMethod('setPosition', arguments);
+    await _channel.invokeMethod('setBounds', arguments);
   }
 
   /// Returns `Size` - Contains the window's width and height.
   Future<Size> getSize() async {
-    final Map<String, dynamic> arguments = {
-      'devicePixelRatio': window.devicePixelRatio,
-    };
-    final Map<dynamic, dynamic> resultData =
-        await _channel.invokeMethod('getSize', arguments);
-    return Size(resultData['width'], resultData['height']);
+    Rect bounds = await getBounds();
+    return bounds.size;
   }
 
   /// Resizes the window to `width` and `height`.
-  Future<void> setSize(Size size, {animate = false}) async {
-    final Map<String, dynamic> arguments = {
-      'devicePixelRatio': window.devicePixelRatio,
-      'width': size.width,
-      'height': size.height,
-      'animate': animate,
-    }..removeWhere((key, value) => value == null);
-    await _channel.invokeMethod('setSize', arguments);
+  Future<void> setSize(Size size, {bool animate = false}) async {
+    await setBounds(
+      null,
+      size: size,
+      animate: animate,
+    );
+  }
+
+  /// Returns `Offset` - Contains the window's current position.
+  Future<Offset> getPosition() async {
+    Rect bounds = await getBounds();
+    return bounds.topLeft;
+  }
+
+  /// Moves window to position.
+  Future<void> setPosition(Offset position, {bool animate = false}) async {
+    await setBounds(
+      null,
+      position: position,
+      animate: animate,
+    );
   }
 
   /// Sets the minimum size of window to `width` and `height`.
@@ -393,11 +375,11 @@ class WindowManager {
   }
 
   /// Sets whether the window can be manually resized by the user.
-  setResizable(isResizable) {
+  Future<void> setResizable(bool isResizable) async {
     final Map<String, dynamic> arguments = {
       'isResizable': isResizable,
     };
-    _channel.invokeMethod('setResizable', arguments);
+    await _channel.invokeMethod('setResizable', arguments);
   }
 
   /// Returns `bool` - Whether the window can be moved by user.
@@ -410,11 +392,11 @@ class WindowManager {
   /// Sets whether the window can be moved by user.
   ///
   /// @platforms macos
-  setMovable(isMovable) {
+  Future<void> setMovable(bool isMovable) async {
     final Map<String, dynamic> arguments = {
       'isMovable': isMovable,
     };
-    _channel.invokeMethod('setMovable', arguments);
+    await _channel.invokeMethod('setMovable', arguments);
   }
 
   /// Returns `bool` - Whether the window can be manually minimized by the user.
@@ -427,18 +409,33 @@ class WindowManager {
   /// Sets whether the window can be manually minimized by user.
   ///
   /// @platforms macos,windows
-  setMinimizable(isMinimizable) {
+  Future<void> setMinimizable(bool isMinimizable) async {
     final Map<String, dynamic> arguments = {
       'isMinimizable': isMinimizable,
     };
-    _channel.invokeMethod('setMinimizable', arguments);
+    await _channel.invokeMethod('setMinimizable', arguments);
   }
 
   /// Returns `bool` - Whether the window can be manually closed by user.
   ///
-  /// @platforms macos,windows
+  /// @platforms windows
   Future<bool> isClosable() async {
     return await _channel.invokeMethod('isClosable');
+  }
+
+  /// Returns `bool` - Whether the window can be manually maximized by the user.
+  ///
+  /// @platforms windows
+  Future<bool> isMaximizable() async {
+    return await _channel.invokeMethod('isMaximizable');
+  }
+
+  /// Sets whether the window can be manually maximized by the user.
+  Future<void> setMaximizable(bool isMaximizable) async {
+    final Map<String, dynamic> arguments = {
+      'isMaximizable': isMaximizable,
+    };
+    await _channel.invokeMethod('setMaximizable', arguments);
   }
 
   /// Sets whether the window can be manually closed by user.
@@ -464,6 +461,21 @@ class WindowManager {
     await _channel.invokeMethod('setAlwaysOnTop', arguments);
   }
 
+  /// Returns `bool` - Whether the window is always below other windows.
+  Future<bool> isAlwaysOnBottom() async {
+    return await _channel.invokeMethod('isAlwaysOnBottom');
+  }
+
+  /// Sets whether the window should show always below other windows.
+  ///
+  /// @platforms linux
+  Future<void> setAlwaysOnBottom(bool isAlwaysOnBottom) async {
+    final Map<String, dynamic> arguments = {
+      'isAlwaysOnBottom': isAlwaysOnBottom,
+    };
+    await _channel.invokeMethod('setAlwaysOnBottom', arguments);
+  }
+
   /// Returns `String` - The title of the native window.
   Future<String> getTitle() async {
     return await _channel.invokeMethod('getTitle');
@@ -478,24 +490,25 @@ class WindowManager {
   }
 
   /// Changes the title bar style of native window.
-  ///
-  /// @platforms macos,windows
   Future<void> setTitleBarStyle(
-    String titleBarStyle, {
+    TitleBarStyle titleBarStyle, {
     bool windowButtonVisibility = true,
   }) async {
     final Map<String, dynamic> arguments = {
-      'titleBarStyle': titleBarStyle,
+      'titleBarStyle': describeEnum(titleBarStyle),
       'windowButtonVisibility': windowButtonVisibility,
     };
     await _channel.invokeMethod('setTitleBarStyle', arguments);
   }
 
   /// Returns `int` - The title bar height of the native window.
-  ///
-  /// @platforms macos,windows
   Future<int> getTitleBarHeight() async {
     return await _channel.invokeMethod('getTitleBarHeight');
+  }
+
+  /// Returns `bool` - Whether skipping taskbar is enabled.
+  Future<bool> isSkipTaskbar() async {
+    return await _channel.invokeMethod('isSkipTaskbar');
   }
 
   /// Makes the window not show in the taskbar / dock.
@@ -516,16 +529,31 @@ class WindowManager {
     await _channel.invokeMethod('setProgressBar', arguments);
   }
 
-  /// Returns `bool` - Whether the window has a shadow.
+  /// Sets window/taskbar icon.
   ///
-  /// @platforms macos
+  /// @platforms windows
+  Future<void> setIcon(String iconPath) async {
+    final Map<String, dynamic> arguments = {
+      'iconPath': path.joinAll([
+        path.dirname(Platform.resolvedExecutable),
+        'data/flutter_assets',
+        iconPath,
+      ]),
+    };
+
+    await _channel.invokeMethod('setIcon', arguments);
+  }
+
+  /// Returns `bool` - Whether the window has a shadow. On Windows, always returns true unless window is frameless.
+  ///
+  /// @platforms macos,windows
   Future<bool> hasShadow() async {
     return await _channel.invokeMethod('hasShadow');
   }
 
-  /// Sets whether the window should have a shadow.
+  /// Sets whether the window should have a shadow. On Windows, doesn't do anything unless window is frameless.
   ///
-  /// @platforms macos
+  /// @platforms macos,windows
   Future<void> setHasShadow(bool hasShadow) async {
     final Map<String, dynamic> arguments = {
       'hasShadow': hasShadow,
@@ -533,16 +561,12 @@ class WindowManager {
     await _channel.invokeMethod('setHasShadow', arguments);
   }
 
-  /// Returns `double` - between 0.0 (fully transparent) and 1.0 (fully opaque). On Linux, always returns 1.
-  ///
-  /// @platforms macos,windows
+  /// Returns `double` - between 0.0 (fully transparent) and 1.0 (fully opaque).
   Future<double> getOpacity() async {
     return await _channel.invokeMethod('getOpacity');
   }
 
   /// Sets the opacity of the window.
-  ///
-  /// @platforms macos,windows
   Future<void> setOpacity(double opacity) async {
     final Map<String, dynamic> arguments = {
       'opacity': opacity,
@@ -551,13 +575,27 @@ class WindowManager {
   }
 
   /// Sets the brightness of the window.
-  ///
-  /// @platforms macos,windows
   Future<void> setBrightness(Brightness brightness) async {
     final Map<String, dynamic> arguments = {
-      'brightness': brightness.name,
+      'brightness': describeEnum(brightness),
     };
     await _channel.invokeMethod('setBrightness', arguments);
+  }
+
+  /// Makes the window ignore all mouse events.
+  ///
+  /// All mouse events happened in this window will be passed to the window below this window, but if this window has focus, it will still receive keyboard events.
+  Future<void> setIgnoreMouseEvents(bool ignore, {bool forward = false}) async {
+    final Map<String, dynamic> arguments = {
+      'ignore': ignore,
+      'forward': forward,
+    };
+    await _channel.invokeMethod('setIgnoreMouseEvents', arguments);
+  }
+
+  Future<void> popUpWindowMenu() async {
+    final Map<String, dynamic> arguments = {};
+    await _channel.invokeMethod('popUpWindowMenu', arguments);
   }
 
   /// Starts a window drag based on the specified mouse-down event.
@@ -565,10 +603,14 @@ class WindowManager {
     await _channel.invokeMethod('startDragging');
   }
 
+  /// Starts a window resize based on the specified mouse-down & mouse-move event.
+  ///
+  /// @platforms linux,windows
   Future<void> startResizing(ResizeEdge resizeEdge) {
     return _channel.invokeMethod<bool>(
       'startResizing',
       {
+        "resizeEdge": describeEnum(resizeEdge),
         "top": resizeEdge == ResizeEdge.top ||
             resizeEdge == ResizeEdge.topLeft ||
             resizeEdge == ResizeEdge.topRight,
@@ -583,15 +625,6 @@ class WindowManager {
             resizeEdge == ResizeEdge.bottomLeft,
       },
     );
-  }
-
-  Future<Map<String, dynamic>> _getPrimaryDisplay() async {
-    final Map<String, dynamic> arguments = {
-      'devicePixelRatio': window.devicePixelRatio,
-    };
-    final Map<dynamic, dynamic> resultData =
-        await _channel.invokeMethod('getPrimaryDisplay', arguments);
-    return Map<String, dynamic>.from(resultData);
   }
 
   Future<bool> isSubWindow() async {
@@ -613,6 +646,18 @@ class WindowManager {
       'title': title,
     }..removeWhere((key, value) => value == null);
     await _channel.invokeMethod('createSubWindow', arguments);
+  }
+
+  /// Grabs the keyboard.
+  /// @platforms linux
+  Future<bool> grabKeyboard() async {
+    return await _channel.invokeMethod('grabKeyboard');
+  }
+
+  /// Ungrabs the keyboard.
+  /// @platforms linux
+  Future<bool> ungrabKeyboard() async {
+    return await _channel.invokeMethod('ungrabKeyboard');
   }
 }
 

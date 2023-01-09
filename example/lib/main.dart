@@ -10,17 +10,16 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
 
-  // Use it only after calling `hiddenWindowAtLaunch`
-  windowManager.waitUntilReadyToShow().then((_) async {
-    // // Hide window title bar
-    // if (!Platform.isLinux) {
-    //   await windowManager.setTitleBarStyle('hidden');
-    // }
-    await windowManager.setSize(Size(800, 600));
-    await windowManager.center();
+  WindowOptions windowOptions = WindowOptions(
+    size: Size(800, 600),
+    center: true,
+    backgroundColor: Colors.transparent,
+    skipTaskbar: false,
+    titleBarStyle: TitleBarStyle.hidden,
+  );
+  windowManager.waitUntilReadyToShow(windowOptions, () async {
     await windowManager.show();
     await windowManager.focus();
-    await windowManager.setSkipTaskbar(false);
   });
 
   runApp(MyApp());
@@ -53,12 +52,19 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    final virtualWindowFrameBuilder = VirtualWindowFrameInit();
+    final botToastBuilder = BotToastInit();
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: lightThemeData,
       darkTheme: darkThemeData,
       themeMode: _themeMode,
-      builder: BotToastInit(),
+      builder: (context, child) {
+        child = virtualWindowFrameBuilder(context, child);
+        child = botToastBuilder(context, child);
+        return child;
+      },
       navigatorObservers: [BotToastNavigatorObserver()],
       home: HomePage(),
     );

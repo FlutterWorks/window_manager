@@ -1,6 +1,6 @@
 # window_manager
 
-[![pub version][pub-image]][pub-url] [![][discord-image]][discord-url]
+[![pub version][pub-image]][pub-url] [![][discord-image]][discord-url] ![][visits-count-image] 
 
 [pub-image]: https://img.shields.io/pub/v/window_manager.svg
 [pub-url]: https://pub.dev/packages/window_manager
@@ -8,7 +8,9 @@
 [discord-image]: https://img.shields.io/discord/884679008049037342.svg
 [discord-url]: https://discord.gg/zPa6EZ2jqb
 
-这个插件允许 Flutter **桌面** 应用调整窗口的大小和位置。
+[visits-count-image]: https://img.shields.io/badge/dynamic/json?label=Visits%20Count&query=value&url=https://api.countapi.xyz/hit/leanflutter.window_manager/visits
+
+这个插件允许 Flutter 桌面应用调整窗口的大小和位置。
 
 ---
 
@@ -19,88 +21,103 @@
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-- [window_manager](#window_manager)
-  - [平台支持](#平台支持)
-  - [快速开始](#快速开始)
-    - [安装](#安装)
-    - [用法](#用法)
-      - [监听事件](#监听事件)
-      - [关闭时退出](#关闭时退出)
-        - [macOS](#macos)
-      - [关闭前确认](#关闭前确认)
-      - [在启动时隐藏](#在启动时隐藏)
-        - [macOS](#macos-1)
-        - [Windows](#windows)
-  - [谁在用使用它？](#谁在用使用它)
-  - [API](#api)
-    - [WindowManager](#windowmanager)
-      - [Methods](#methods)
-        - [destroy  `macos`  `windows`](#destroy--macos--windows)
-        - [close](#close)
-        - [isPreventClose](#ispreventclose)
-        - [setPreventClose](#setpreventclose)
-        - [focus](#focus)
-        - [blur  `macos`  `windows`](#blur--macos--windows)
-        - [isFocused  `macos`  `windows`](#isfocused--macos--windows)
-        - [show](#show)
-        - [hide](#hide)
-        - [isVisible](#isvisible)
-        - [isMaximized](#ismaximized)
-        - [maximize](#maximize)
-        - [unmaximize](#unmaximize)
-        - [isMinimized](#isminimized)
-        - [minimize](#minimize)
-        - [restore](#restore)
-        - [isFullScreen](#isfullscreen)
-        - [setFullScreen](#setfullscreen)
-        - [setAspectRatio](#setaspectratio)
-        - [setBackgroundColor](#setbackgroundcolor)
-        - [getBounds](#getbounds)
-        - [setBounds](#setbounds)
-        - [getPosition](#getposition)
-        - [setAlignment](#setalignment)
-        - [center](#center)
-        - [setPosition](#setposition)
-        - [getSize](#getsize)
-        - [setSize](#setsize)
-        - [setMinimumSize](#setminimumsize)
-        - [setMaximumSize](#setmaximumsize)
-        - [isResizable](#isresizable)
-        - [setResizable](#setresizable)
-        - [isMovable  `macos`](#ismovable--macos)
-        - [setMovable  `macos`](#setmovable--macos)
-        - [isMinimizable  `macos`  `windows`](#isminimizable--macos--windows)
-        - [setMinimizable  `macos`  `windows`](#setminimizable--macos--windows)
-        - [isClosable  `macos`  `windows`](#isclosable--macos--windows)
-        - [setClosable  `macos`  `windows`](#setclosable--macos--windows)
-        - [isAlwaysOnTop](#isalwaysontop)
-        - [setAlwaysOnTop](#setalwaysontop)
-        - [getTitle](#gettitle)
-        - [setTitle](#settitle)
-        - [setTitleBarStyle  `macos`  `windows`](#settitlebarstyle--macos--windows)
-        - [getTitleBarHeight  `macos`  `windows`](#gettitlebarheight--macos--windows)
-        - [setSkipTaskbar](#setskiptaskbar)
-        - [setProgressBar  `macos`](#setprogressbar--macos)
-        - [hasShadow  `macos`](#hasshadow--macos)
-        - [setHasShadow  `macos`](#sethasshadow--macos)
-        - [getOpacity  `macos`  `windows`](#getopacity--macos--windows)
-        - [setOpacity  `macos`  `windows`](#setopacity--macos--windows)
-        - [startDragging](#startdragging)
-    - [WindowListener](#windowlistener)
-      - [Methods](#methods-1)
-        - [onWindowClose](#onwindowclose)
-        - [onWindowFocus](#onwindowfocus)
-        - [onWindowBlur](#onwindowblur)
-        - [onWindowMaximize](#onwindowmaximize)
-        - [onWindowUnmaximize](#onwindowunmaximize)
-        - [onWindowMinimize](#onwindowminimize)
-        - [onWindowRestore](#onwindowrestore)
-        - [onWindowResize](#onwindowresize)
-        - [onWindowMove](#onwindowmove)
-        - [onWindowEnterFullScreen](#onwindowenterfullscreen)
-        - [onWindowLeaveFullScreen](#onwindowleavefullscreen)
-        - [onWindowEvent](#onwindowevent)
-  - [许可证](#许可证)
+- [平台支持](#%E5%B9%B3%E5%8F%B0%E6%94%AF%E6%8C%81)
+- [快速开始](#%E5%BF%AB%E9%80%9F%E5%BC%80%E5%A7%8B)
+  - [安装](#%E5%AE%89%E8%A3%85)
+  - [用法](#%E7%94%A8%E6%B3%95)
+    - [监听事件](#%E7%9B%91%E5%90%AC%E4%BA%8B%E4%BB%B6)
+    - [关闭时退出](#%E5%85%B3%E9%97%AD%E6%97%B6%E9%80%80%E5%87%BA)
+      - [macOS](#macos)
+    - [关闭前确认](#%E5%85%B3%E9%97%AD%E5%89%8D%E7%A1%AE%E8%AE%A4)
+    - [在启动时隐藏](#%E5%9C%A8%E5%90%AF%E5%8A%A8%E6%97%B6%E9%9A%90%E8%97%8F)
+      - [Linux](#linux)
+      - [macOS](#macos-1)
+      - [Windows](#windows)
+- [文章](#%E6%96%87%E7%AB%A0)
+- [谁在用使用它？](#%E8%B0%81%E5%9C%A8%E7%94%A8%E4%BD%BF%E7%94%A8%E5%AE%83)
+- [API](#api)
+  - [WindowManager](#windowmanager)
+    - [Methods](#methods)
+      - [waitUntilReadyToShow](#waituntilreadytoshow)
+      - [destroy](#destroy)
+      - [close](#close)
+      - [isPreventClose](#ispreventclose)
+      - [setPreventClose](#setpreventclose)
+      - [focus](#focus)
+      - [blur  `macos`  `windows`](#blur--macos--windows)
+      - [isFocused  `macos`  `windows`](#isfocused--macos--windows)
+      - [show](#show)
+      - [hide](#hide)
+      - [isVisible](#isvisible)
+      - [isMaximized](#ismaximized)
+      - [maximize](#maximize)
+      - [unmaximize](#unmaximize)
+      - [isMinimized](#isminimized)
+      - [minimize](#minimize)
+      - [restore](#restore)
+      - [isFullScreen](#isfullscreen)
+      - [setFullScreen](#setfullscreen)
+      - [setAspectRatio](#setaspectratio)
+      - [setBackgroundColor](#setbackgroundcolor)
+      - [setAlignment](#setalignment)
+      - [center](#center)
+      - [getBounds](#getbounds)
+      - [setBounds](#setbounds)
+      - [getSize](#getsize)
+      - [setSize](#setsize)
+      - [getPosition](#getposition)
+      - [setPosition](#setposition)
+      - [setMinimumSize](#setminimumsize)
+      - [setMaximumSize](#setmaximumsize)
+      - [isResizable](#isresizable)
+      - [setResizable](#setresizable)
+      - [isMovable  `macos`](#ismovable--macos)
+      - [setMovable  `macos`](#setmovable--macos)
+      - [isMinimizable  `macos`  `windows`](#isminimizable--macos--windows)
+      - [setMinimizable  `macos`  `windows`](#setminimizable--macos--windows)
+      - [isClosable  `windows`](#isclosable--windows)
+      - [isMaximizable  `windows`](#ismaximizable--windows)
+      - [setMaximizable](#setmaximizable)
+      - [setClosable  `macos`  `windows`](#setclosable--macos--windows)
+      - [isAlwaysOnTop](#isalwaysontop)
+      - [setAlwaysOnTop](#setalwaysontop)
+      - [isAlwaysOnBottom](#isalwaysonbottom)
+      - [setAlwaysOnBottom  `linux`](#setalwaysonbottom--linux)
+      - [getTitle](#gettitle)
+      - [setTitle](#settitle)
+      - [setTitleBarStyle](#settitlebarstyle)
+      - [getTitleBarHeight](#gettitlebarheight)
+      - [isSkipTaskbar](#isskiptaskbar)
+      - [setSkipTaskbar](#setskiptaskbar)
+      - [setProgressBar  `macos`](#setprogressbar--macos)
+      - [setIcon  `windows`](#seticon--windows)
+      - [hasShadow  `macos`  `windows`](#hasshadow--macos--windows)
+      - [setHasShadow  `macos`  `windows`](#sethasshadow--macos--windows)
+      - [getOpacity](#getopacity)
+      - [setOpacity](#setopacity)
+      - [setBrightness](#setbrightness)
+      - [setIgnoreMouseEvents](#setignoremouseevents)
+      - [startDragging](#startdragging)
+      - [startResizing  `linux`  `windows`](#startresizing--linux--windows)
+      - [grabKeyboard  `linux`](#grabkeyboard--linux)
+      - [ungrabKeyboard  `linux`](#ungrabkeyboard--linux)
+  - [WindowListener](#windowlistener)
+    - [Methods](#methods-1)
+      - [onWindowClose](#onwindowclose)
+      - [onWindowFocus](#onwindowfocus)
+      - [onWindowBlur](#onwindowblur)
+      - [onWindowMaximize](#onwindowmaximize)
+      - [onWindowUnmaximize](#onwindowunmaximize)
+      - [onWindowMinimize](#onwindowminimize)
+      - [onWindowRestore](#onwindowrestore)
+      - [onWindowResize](#onwindowresize)
+      - [onWindowResized  `macos`  `windows`](#onwindowresized--macos--windows)
+      - [onWindowMove](#onwindowmove)
+      - [onWindowMoved  `macos`  `windows`](#onwindowmoved--macos--windows)
+      - [onWindowEnterFullScreen](#onwindowenterfullscreen)
+      - [onWindowLeaveFullScreen](#onwindowleavefullscreen)
+      - [onWindowEvent](#onwindowevent)
+- [许可证](#%E8%AE%B8%E5%8F%AF%E8%AF%81)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -118,7 +135,7 @@
 
 ```yaml
 dependencies:
-  window_manager: ^0.1.9
+  window_manager: ^0.3.0
 ```
 
 或
@@ -142,14 +159,16 @@ void main() async {
   // 必须加上这一行。
   await windowManager.ensureInitialized();
 
-  // Use it only after calling `hiddenWindowAtLaunch`
-  windowManager.waitUntilReadyToShow().then((_) async{
-    // 隐藏窗口标题栏
-    await windowManager.setTitleBarStyle('hidden');
-    await windowManager.setSize(Size(800, 600));
-    await windowManager.center();
+  WindowOptions windowOptions = WindowOptions(
+    size: Size(800, 600),
+    center: true,
+    backgroundColor: Colors.transparent,
+    skipTaskbar: false,
+    titleBarStyle: TitleBarStyle.hidden,
+  );
+  windowManager.waitUntilReadyToShow(windowOptions, () async {
     await windowManager.show();
-    await windowManager.setSkipTaskbar(false);
+    await windowManager.focus();
   });
 
   runApp(MyApp());
@@ -341,6 +360,39 @@ class _HomePageState extends State<HomePage> with WindowListener {
 
 #### 在启动时隐藏
 
+##### Linux
+
+更改文件 `linux/my_application.cc` 如下：
+
+```diff
+
+...
+
+// Implements GApplication::activate.
+static void my_application_activate(GApplication* application) {
+  
+  ...
+
+  gtk_window_set_default_size(window, 1280, 720);
+-  gtk_widget_show(GTK_WIDGET(window));
++  gtk_widget_realize(GTK_WIDGET(window));
+
+  g_autoptr(FlDartProject) project = fl_dart_project_new();
+  fl_dart_project_set_dart_entrypoint_arguments(project, self->dart_entrypoint_arguments);
+
+  FlView* view = fl_view_new(project);
+  gtk_widget_show(GTK_WIDGET(view));
+  gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
+
+  fl_register_plugins(FL_PLUGIN_REGISTRY(view));
+
+  gtk_widget_grab_focus(GTK_WIDGET(view));
+}
+
+...
+
+```
+
 ##### macOS
 
 更改文件 `macos/Runner/MainFlutterWindow.swift` 如下：
@@ -427,14 +479,20 @@ class _HomePageState extends State<HomePage> with WindowListener {
 
 ```
 
+## 文章
+
+- [关闭窗口后点击Dock图标进行恢复](https://leanflutter.org/zh/blog/click-dock-icon-to-restore-after-closing-the-window)
+- [让应用成为单实例](https://leanflutter.org/zh/blog/making-the-app-single-instanced)
+
 ## 谁在用使用它？
 
 - [AuthPass](https://authpass.app/) - 基于Flutter的密码管理器，适用于所有平台。兼容Keepass 2.x（kdbx 3.x）。
 - [Biyi (比译)](https://biyidev.com/) - 一个便捷的翻译和词典应用程序。
 - [BlueBubbles](https://github.com/BlueBubblesApp/bluebubbles-app) - BlueBubbles is an ecosystem of apps bringing iMessage to Android, Windows, and Linux
-- [Yukino](https://github.com/yukino-app/yukino/tree/flutter-rewrite) - Yukino lets you read manga or stream anime ad-free from multiple sources.
 - [LunaSea](https://github.com/CometTools/LunaSea) - A self-hosted controller for mobile and macOS built using the Flutter framework.
 - [Linwood Butterfly](https://github.com/LinwoodCloud/Butterfly) - 用 Flutter 编写的开源笔记应用
+- [RustDesk](https://github.com/rustdesk/rustdesk) - 远程桌面软件，开箱即用，无需任何配置。您完全掌控数据，不用担心安全问题。
+- [Ubuntu Desktop Installer](https://github.com/canonical/ubuntu-desktop-installer) - This project is a modern implementation of the Ubuntu Desktop installer.
 
 ## API
 
@@ -443,10 +501,13 @@ class _HomePageState extends State<HomePage> with WindowListener {
 
 #### Methods
 
-##### destroy  `macos`  `windows`
+##### waitUntilReadyToShow
+
+Wait until ready to show.
+
+##### destroy
 
 Force closing the window.
-
 
 ##### close
 
@@ -493,7 +554,7 @@ Returns `bool` - Whether the window is maximized.
 
 ##### maximize
 
-Maximizes the window.
+Maximizes the window. `vertically` simulates aero snap, only works on Windows
 
 ##### unmaximize
 
@@ -527,18 +588,6 @@ This will make a window maintain an aspect ratio.
 
 Sets the background color of the window.
 
-##### getBounds
-
-Returns `Rect` - The bounds of the window as Object.
-
-##### setBounds
-
-Resizes and moves the window to the supplied bounds.
-
-##### getPosition
-
-Returns `Offset` - Contains the window's current position.
-
 ##### setAlignment
 
 Move the window to a position aligned with the screen.
@@ -547,9 +596,13 @@ Move the window to a position aligned with the screen.
 
 Moves window to the center of the screen.
 
-##### setPosition
+##### getBounds
 
-Moves window to position.
+Returns `Rect` - The bounds of the window as Object.
+
+##### setBounds
+
+Resizes and moves the window to the supplied bounds.
 
 ##### getSize
 
@@ -558,6 +611,14 @@ Returns `Size` - Contains the window's width and height.
 ##### setSize
 
 Resizes the window to `width` and `height`.
+
+##### getPosition
+
+Returns `Offset` - Contains the window's current position.
+
+##### setPosition
+
+Moves window to position.
 
 ##### setMinimumSize
 
@@ -595,10 +656,19 @@ Returns `bool` - Whether the window can be manually minimized by the user.
 Sets whether the window can be manually minimized by user.
 
 
-##### isClosable  `macos`  `windows`
+##### isClosable  `windows`
 
 Returns `bool` - Whether the window can be manually closed by user.
 
+
+##### isMaximizable  `windows`
+
+Returns `bool` - Whether the window can be manually maximized by the user.
+
+
+##### setMaximizable
+
+Sets whether the window can be manually maximized by the user.
 
 ##### setClosable  `macos`  `windows`
 
@@ -613,6 +683,15 @@ Returns `bool` - Whether the window is always on top of other windows.
 
 Sets whether the window should show always on top of other windows.
 
+##### isAlwaysOnBottom
+
+Returns `bool` - Whether the window is always below other windows.
+
+##### setAlwaysOnBottom  `linux`
+
+Sets whether the window should show always below other windows.
+
+
 ##### getTitle
 
 Returns `String` - The title of the native window.
@@ -621,15 +700,17 @@ Returns `String` - The title of the native window.
 
 Changes the title of native window to title.
 
-##### setTitleBarStyle  `macos`  `windows`
+##### setTitleBarStyle
 
 Changes the title bar style of native window.
 
-
-##### getTitleBarHeight  `macos`  `windows`
+##### getTitleBarHeight
 
 Returns `int` - The title bar height of the native window.
 
+##### isSkipTaskbar
+
+Returns `bool` - Whether skipping taskbar is enabled.
 
 ##### setSkipTaskbar
 
@@ -640,29 +721,55 @@ Makes the window not show in the taskbar / dock.
 Sets progress value in progress bar. Valid range is [0, 1.0].
 
 
-##### hasShadow  `macos`
+##### setIcon  `windows`
 
-Returns `bool` - Whether the window has a shadow.
-
-
-##### setHasShadow  `macos`
-
-Sets whether the window should have a shadow.
+Sets window/taskbar icon.
 
 
-##### getOpacity  `macos`  `windows`
+##### hasShadow  `macos`  `windows`
 
-Returns `double` - between 0.0 (fully transparent) and 1.0 (fully opaque). On Linux, always returns 1.
+Returns `bool` - Whether the window has a shadow. On Windows, always returns true unless window is frameless.
 
 
-##### setOpacity  `macos`  `windows`
+##### setHasShadow  `macos`  `windows`
+
+Sets whether the window should have a shadow. On Windows, doesn't do anything unless window is frameless.
+
+
+##### getOpacity
+
+Returns `double` - between 0.0 (fully transparent) and 1.0 (fully opaque).
+
+##### setOpacity
 
 Sets the opacity of the window.
 
+##### setBrightness
+
+Sets the brightness of the window.
+
+##### setIgnoreMouseEvents
+
+Makes the window ignore all mouse events.
+
+All mouse events happened in this window will be passed to the window below this window, but if this window has focus, it will still receive keyboard events.
 
 ##### startDragging
 
 Starts a window drag based on the specified mouse-down event.
+
+##### startResizing  `linux`  `windows`
+
+Starts a window resize based on the specified mouse-down & mouse-move event.
+
+
+##### grabKeyboard  `linux`
+
+Grabs the keyboard.
+
+##### ungrabKeyboard  `linux`
+
+Ungrabs the keyboard.
 
 ### WindowListener
 
@@ -700,9 +807,19 @@ Emitted when the window is restored from a minimized state.
 
 Emitted after the window has been resized.
 
+##### onWindowResized  `macos`  `windows`
+
+Emitted once when the window has finished being resized.
+
+
 ##### onWindowMove
 
 Emitted when the window is being moved to a new position.
+
+##### onWindowMoved  `macos`  `windows`
+
+Emitted once when the window is moved to a new position.
+
 
 ##### onWindowEnterFullScreen
 

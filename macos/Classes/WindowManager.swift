@@ -172,7 +172,7 @@ public class WindowManager: NSObject, NSWindowDelegate {
         
         // Reset the behaviour to default if aspect_ratio is set to 0 or less.
         if (aspectRatio > 0.0) {
-            let aspectRatioSize: NSSize = NSMakeSize(aspectRatio, 1.0)
+            let aspectRatioSize: NSSize = NSMakeSize(CGFloat(aspectRatio), 1.0)
             if (hasFrame) {
                 mainWindow.contentAspectRatio = aspectRatioSize
             } else {
@@ -209,43 +209,19 @@ public class WindowManager: NSObject, NSWindowDelegate {
         }
     }
     
-    public func getPosition() -> NSDictionary {
+    public func getBounds() -> NSDictionary {
         let frameRect: NSRect = mainWindow.frame;
         
         let data: NSDictionary = [
             "x": frameRect.topLeft.x,
             "y": frameRect.topLeft.y,
-        ]
-        return data;
-    }
-    
-    public func setPosition(_ args: [String: Any]) {
-        let animate = args["animate"] as? Bool ?? false
-        
-        var frameRect = mainWindow.frame
-        if (args["x"] != nil && args["y"] != nil) {
-            frameRect.topLeft.x = CGFloat(args["x"] as! Float)
-            frameRect.topLeft.y = CGFloat(args["y"] as! Float)
-        }
-        
-        if (animate) {
-            mainWindow.animator().setFrame(frameRect, display: true, animate: true)
-        } else {
-            mainWindow.setFrame(frameRect, display: true)
-        }
-    }
-    
-    public func getSize() -> NSDictionary {
-        let frameRect: NSRect = mainWindow.frame;
-        
-        let data: NSDictionary = [
             "width": frameRect.size.width,
             "height": frameRect.size.height,
         ]
         return data;
     }
     
-    public func setSize(_ args: [String: Any]) {
+    public func setBounds(_ args: [String: Any]) {
         let animate = args["animate"] as? Bool ?? false
         
         var frameRect = mainWindow.frame
@@ -256,7 +232,11 @@ public class WindowManager: NSObject, NSWindowDelegate {
             frameRect.origin.y += (frameRect.size.height - height)
             frameRect.size.width = width
             frameRect.size.height = height
-            
+        }
+        
+        if (args["x"] != nil && args["y"] != nil) {
+            frameRect.topLeft.x = CGFloat(truncating: args["x"] as! NSNumber)
+            frameRect.topLeft.y = CGFloat(truncating: args["y"] as! NSNumber)
         }
         
         if (animate) {
@@ -373,6 +353,10 @@ public class WindowManager: NSObject, NSWindowDelegate {
         return Int(windowHeight - mainWindow.contentRect(forFrameRect: frame).height)
     }
     
+    public func isSkipTaskbar() -> Bool {
+        return NSApplication.shared.activationPolicy() == .accessory
+    }
+    
     public func setSkipTaskbar(_ args: [String: Any]) {
         let isSkipTaskbar: Bool = args["isSkipTaskbar"] as! Bool
         NSApplication.shared.setActivationPolicy(isSkipTaskbar ? .accessory : .regular)
@@ -444,33 +428,25 @@ public class WindowManager: NSObject, NSWindowDelegate {
         mainWindow.invalidateShadow()
     }
     
-    public func startDragging() {
-        DispatchQueue.main.async {
-            let window: NSWindow  = self.mainWindow
-            window.performDrag(with: window.currentEvent!)
+    public func setIgnoreMouseEvents(_ args: [String: Any]) {
+        let ignore: Bool = args["ignore"] as! Bool
+        let forward: Bool = args["forward"] as! Bool
+        mainWindow.ignoresMouseEvents = ignore
+        
+        if (!ignore) {
+            mainWindow.acceptsMouseMovedEvents = false
+        } else {
+            mainWindow.acceptsMouseMovedEvents = forward
         }
     }
     
-    public func getPrimaryDisplay() -> NSDictionary {
-        let screen = NSScreen.main!
-        let size: NSDictionary = [
-            "width": screen.frame.width,
-            "height": screen.frame.height,
-        ]
-        let visiblePosition: NSDictionary = [
-            "x": screen.visibleFrame.topLeft.x,
-            "y": screen.visibleFrame.topLeft.y,
-        ]
-        let visibleSize: NSDictionary = [
-            "width": screen.visibleFrame.width,
-            "height": screen.visibleFrame.height,
-        ]
-        let dict: NSDictionary = [
-            "size": size,
-            "visiblePosition": visiblePosition,
-            "visibleSize": visibleSize,
-        ]
-        return dict;
+    public func startDragging() {
+        DispatchQueue.main.async {
+            let window: NSWindow  = self.mainWindow
+            if(window.currentEvent != nil) {
+                window.performDrag(with: window.currentEvent!)
+            }
+        }
     }
     
     public func isSubWindow() -> Bool {
@@ -540,8 +516,16 @@ public class WindowManager: NSObject, NSWindowDelegate {
         }
     }
     
-    public func windowDidMove(_ notification: Notification) {
+    public func windowDidEndLiveResize(_ notification: Notification) {
+        _emitEvent("resized")
+    }
+    
+    public func windowWillMove(_ notification: Notification) {
         _emitEvent("move")
+    }
+    
+    public func windowDidMove(_ notification: Notification) {
+        _emitEvent("moved")
     }
     
     public func windowDidBecomeMain(_ notification: Notification) {

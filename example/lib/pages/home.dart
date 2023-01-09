@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:bot_toast/bot_toast.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart' hide MenuItem;
+import 'package:flutter/material.dart' hide MenuItem;
 import 'package:preference_list/preference_list.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
@@ -30,6 +30,9 @@ class HomePage extends StatefulWidget {
   _HomePageState createState() => _HomePageState();
 }
 
+const _kIconTypeDefault = 'default';
+const _kIconTypeOriginal = 'original';
+
 class _HomePageState extends State<HomePage> with TrayListener, WindowListener {
   bool _isPreventClose = false;
   Size _size = _kSizes.first;
@@ -39,12 +42,16 @@ class _HomePageState extends State<HomePage> with TrayListener, WindowListener {
   bool _isResizable = true;
   bool _isMovable = true;
   bool _isMinimizable = true;
+  bool _isMaximizable = true;
   bool _isClosable = true;
   bool _isAlwaysOnTop = false;
+  bool _isAlwaysOnBottom = false;
   bool _isSkipTaskbar = false;
   double _progress = 0;
   bool _hasShadow = true;
   double _opacity = 1;
+  bool _isIgnoreMouseEvents = false;
+  String _iconType = _kIconTypeOriginal;
 
   @override
   void initState() {
@@ -67,19 +74,39 @@ class _HomePageState extends State<HomePage> with TrayListener, WindowListener {
           ? 'images/tray_icon_original.ico'
           : 'images/tray_icon_original.png',
     );
-    List<MenuItem> items = [
-      MenuItem(
-        key: 'show_window',
-        title: 'Show Window',
-      ),
-      MenuItem.separator,
-      MenuItem(
-        key: 'exit_app',
-        title: 'Exit App',
-      ),
-    ];
-    await trayManager.setContextMenu(items);
+    Menu menu = Menu(
+      items: [
+        MenuItem(
+          key: 'show_window',
+          label: 'Show Window',
+        ),
+        MenuItem(
+          key: 'set_ignore_mouse_events',
+          label: 'setIgnoreMouseEvents(false)',
+        ),
+        MenuItem.separator(),
+        MenuItem(
+          key: 'exit_app',
+          label: 'Exit App',
+        ),
+      ],
+    );
+    await trayManager.setContextMenu(menu);
     setState(() {});
+  }
+
+  void _handleSetIcon(String iconType) async {
+    _iconType = iconType;
+    String iconPath =
+        Platform.isWindows ? 'images/tray_icon.ico' : 'images/tray_icon.png';
+
+    if (_iconType == 'original') {
+      iconPath = Platform.isWindows
+          ? 'images/tray_icon_original.ico'
+          : 'images/tray_icon_original.png';
+    }
+
+    await windowManager.setIcon(iconPath);
   }
 
   Widget _buildBody(BuildContext context) {
@@ -109,6 +136,12 @@ class _HomePageState extends State<HomePage> with TrayListener, WindowListener {
         PreferenceListSection(
           title: Text('METHODS'),
           children: [
+            PreferenceListItem(
+              title: Text('setAsFrameless'),
+              onTap: () async {
+                await windowManager.setAsFrameless();
+              },
+            ),
             PreferenceListItem(
               title: Text('close'),
               onTap: () async {
@@ -292,14 +325,21 @@ class _HomePageState extends State<HomePage> with TrayListener, WindowListener {
                 ],
                 onPressed: (int index) async {
                   _size = _kSizes[index];
-                  Rect bounds = await windowManager.getBounds();
-                  windowManager.setBounds(
-                    Rect.fromLTWH(
-                      bounds.left,
-                      bounds.top,
-                      _size.width,
-                      _size.height,
-                    ),
+                  Offset newPosition = await calcWindowPosition(
+                    _size,
+                    Alignment.center,
+                  );
+                  await windowManager.setBounds(
+                    // Rect.fromLTWH(
+                    //   bounds.left + 10,
+                    //   bounds.top + 10,
+                    //   _size.width,
+                    //   _size.height,
+                    // ),
+                    null,
+                    position: newPosition,
+                    size: _size,
+                    animate: true,
                   );
                   setState(() {});
                 },
@@ -323,56 +363,82 @@ class _HomePageState extends State<HomePage> with TrayListener, WindowListener {
                     CupertinoButton(
                       child: Text('topLeft'),
                       onPressed: () async {
-                        await windowManager.setAlignment(Alignment.topLeft);
+                        await windowManager.setAlignment(
+                          Alignment.topLeft,
+                          animate: true,
+                        );
                       },
                     ),
                     CupertinoButton(
                       child: Text('topCenter'),
                       onPressed: () async {
-                        await windowManager.setAlignment(Alignment.topCenter);
+                        await windowManager.setAlignment(
+                          Alignment.topCenter,
+                          animate: true,
+                        );
                       },
                     ),
                     CupertinoButton(
                       child: Text('topRight'),
                       onPressed: () async {
-                        await windowManager.setAlignment(Alignment.topRight);
+                        await windowManager.setAlignment(
+                          Alignment.topRight,
+                          animate: true,
+                        );
                       },
                     ),
                     CupertinoButton(
                       child: Text('centerLeft'),
                       onPressed: () async {
-                        await windowManager.setAlignment(Alignment.centerLeft);
+                        await windowManager.setAlignment(
+                          Alignment.centerLeft,
+                          animate: true,
+                        );
                       },
                     ),
                     CupertinoButton(
                       child: Text('center'),
                       onPressed: () async {
-                        await windowManager.setAlignment(Alignment.center);
+                        await windowManager.setAlignment(
+                          Alignment.center,
+                          animate: true,
+                        );
                       },
                     ),
                     CupertinoButton(
                       child: Text('centerRight'),
                       onPressed: () async {
-                        await windowManager.setAlignment(Alignment.centerRight);
+                        await windowManager.setAlignment(
+                          Alignment.centerRight,
+                          animate: true,
+                        );
                       },
                     ),
                     CupertinoButton(
                       child: Text('bottomLeft'),
                       onPressed: () async {
-                        await windowManager.setAlignment(Alignment.bottomLeft);
+                        await windowManager.setAlignment(
+                          Alignment.bottomLeft,
+                          animate: true,
+                        );
                       },
                     ),
                     CupertinoButton(
                       child: Text('bottomCenter'),
                       onPressed: () async {
-                        await windowManager
-                            .setAlignment(Alignment.bottomCenter);
+                        await windowManager.setAlignment(
+                          Alignment.bottomCenter,
+                          animate: true,
+                        );
                       },
                     ),
                     CupertinoButton(
                       child: Text('bottomRight'),
                       onPressed: () async {
-                        await windowManager.setAlignment(Alignment.bottomRight);
+                        await windowManager.setAlignment(
+                          Alignment.bottomRight,
+                          animate: true,
+                        );
                       },
                     ),
                   ],
@@ -529,6 +595,21 @@ class _HomePageState extends State<HomePage> with TrayListener, WindowListener {
               },
             ),
             PreferenceListSwitchItem(
+              title: Text('isMaximizable / setMaximizable'),
+              onTap: () async {
+                _isMaximizable = await windowManager.isMaximizable();
+                setState(() {});
+                BotToast.showText(text: 'isClosable: $_isMaximizable');
+              },
+              value: _isMaximizable,
+              onChanged: (newValue) async {
+                await windowManager.setMaximizable(newValue);
+                _isMaximizable = await windowManager.isMaximizable();
+                print('isMaximizable: $_isMaximizable');
+                setState(() {});
+              },
+            ),
+            PreferenceListSwitchItem(
               title: Text('isClosable / setClosable'),
               onTap: () async {
                 _isClosable = await windowManager.isClosable();
@@ -556,6 +637,19 @@ class _HomePageState extends State<HomePage> with TrayListener, WindowListener {
                 setState(() {});
               },
             ),
+            PreferenceListSwitchItem(
+              title: Text('isAlwaysOnBottom / setAlwaysOnBottom'),
+              onTap: () async {
+                bool isAlwaysOnBottom = await windowManager.isAlwaysOnBottom();
+                BotToast.showText(text: 'isAlwaysOnBottom: $isAlwaysOnBottom');
+              },
+              value: _isAlwaysOnBottom,
+              onChanged: (newValue) {
+                _isAlwaysOnBottom = newValue;
+                windowManager.setAlwaysOnBottom(_isAlwaysOnBottom);
+                setState(() {});
+              },
+            ),
             PreferenceListItem(
               title: Text('getTitle / setTitle'),
               onTap: () async {
@@ -573,10 +667,10 @@ class _HomePageState extends State<HomePage> with TrayListener, WindowListener {
               accessoryView: Row(
                 children: [
                   CupertinoButton(
-                    child: Text('default'),
+                    child: Text('normal'),
                     onPressed: () async {
                       windowManager.setTitleBarStyle(
-                        'default',
+                        TitleBarStyle.normal,
                         windowButtonVisibility: true,
                       );
                       setState(() {});
@@ -586,7 +680,7 @@ class _HomePageState extends State<HomePage> with TrayListener, WindowListener {
                     child: Text('hidden'),
                     onPressed: () async {
                       windowManager.setTitleBarStyle(
-                        'hidden',
+                        TitleBarStyle.hidden,
                         windowButtonVisibility: false,
                       );
                       setState(() {});
@@ -602,6 +696,15 @@ class _HomePageState extends State<HomePage> with TrayListener, WindowListener {
                 int titleBarHeight = await windowManager.getTitleBarHeight();
                 BotToast.showText(
                   text: 'titleBarHeight: $titleBarHeight',
+                );
+              },
+            ),
+            PreferenceListItem(
+              title: Text('isSkipTaskbar'),
+              onTap: () async {
+                bool isSkipping = await windowManager.isSkipTaskbar();
+                BotToast.showText(
+                  text: 'isSkipTaskbar: $isSkipping',
                 );
               },
             ),
@@ -627,7 +730,25 @@ class _HomePageState extends State<HomePage> with TrayListener, WindowListener {
                   await windowManager.setProgressBar(_progress);
                   await Future.delayed(Duration(milliseconds: 100));
                 }
+                await Future.delayed(Duration(milliseconds: 1000));
+                await windowManager.setProgressBar(-1);
               },
+            ),
+            PreferenceListItem(
+              title: Text('setIcon'),
+              accessoryView: Row(
+                children: [
+                  CupertinoButton(
+                    child: Text('Default'),
+                    onPressed: () => _handleSetIcon(_kIconTypeDefault),
+                  ),
+                  CupertinoButton(
+                    child: Text('Original'),
+                    onPressed: () => _handleSetIcon(_kIconTypeOriginal),
+                  ),
+                ],
+              ),
+              onTap: () => _handleSetIcon(_kIconTypeDefault),
             ),
             PreferenceListSwitchItem(
               title: Text('hasShadow / setHasShadow'),
@@ -663,7 +784,15 @@ class _HomePageState extends State<HomePage> with TrayListener, WindowListener {
                     },
                   ),
                   CupertinoButton(
-                    child: Text('0.5'),
+                    child: Text('0.8'),
+                    onPressed: () async {
+                      _opacity = 0.8;
+                      windowManager.setOpacity(_opacity);
+                      setState(() {});
+                    },
+                  ),
+                  CupertinoButton(
+                    child: Text('0.6'),
                     onPressed: () async {
                       _opacity = 0.5;
                       windowManager.setOpacity(_opacity);
@@ -672,6 +801,24 @@ class _HomePageState extends State<HomePage> with TrayListener, WindowListener {
                   ),
                 ],
               ),
+            ),
+            PreferenceListSwitchItem(
+              title: Text('setIgnoreMouseEvents'),
+              value: _isIgnoreMouseEvents,
+              onChanged: (newValue) async {
+                _isIgnoreMouseEvents = newValue;
+                await windowManager.setIgnoreMouseEvents(
+                  _isIgnoreMouseEvents,
+                  forward: false,
+                );
+                setState(() {});
+              },
+            ),
+            PreferenceListItem(
+              title: Text('popUpWindowMenu'),
+              onTap: () async {
+                await windowManager.popUpWindowMenu();
+              },
             ),
             PreferenceListItem(
               title: Text('createSubWindow'),
@@ -683,14 +830,25 @@ class _HomePageState extends State<HomePage> with TrayListener, WindowListener {
                 );
               },
             ),
+            PreferenceListItem(
+              title: Text('grabKeyboard'),
+              onTap: () async {
+                await windowManager.grabKeyboard();
+              },
+            ),
+            PreferenceListItem(
+              title: Text('ungrabKeyboard'),
+              onTap: () async {
+                await windowManager.ungrabKeyboard();
+              },
+            ),
           ],
         ),
       ],
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _build(BuildContext context) {
     return Stack(
       children: [
         Container(
@@ -739,7 +897,7 @@ class _HomePageState extends State<HomePage> with TrayListener, WindowListener {
                     ),
                   ),
                 ),
-                if (Platform.isWindows)
+                if (Platform.isLinux || Platform.isWindows)
                   Container(
                     height: 100,
                     margin: EdgeInsets.all(20),
@@ -774,8 +932,44 @@ class _HomePageState extends State<HomePage> with TrayListener, WindowListener {
   }
 
   @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) {
+        if (_isIgnoreMouseEvents) {
+          windowManager.setOpacity(1.0);
+        }
+      },
+      onExit: (_) {
+        if (_isIgnoreMouseEvents) {
+          windowManager.setOpacity(0.5);
+        }
+      },
+      child: _build(context),
+    );
+  }
+
+  @override
   void onTrayIconMouseDown() {
     windowManager.show();
+  }
+
+  @override
+  void onTrayIconRightMouseDown() {
+    trayManager.popUpContextMenu();
+  }
+
+  @override
+  void onTrayMenuItemClick(MenuItem menuItem) async {
+    switch (menuItem.key) {
+      case 'show_window':
+        await windowManager.focus();
+        break;
+      case 'set_ignore_mouse_events':
+        _isIgnoreMouseEvents = false;
+        await windowManager.setIgnoreMouseEvents(_isIgnoreMouseEvents);
+        setState(() {});
+        break;
+    }
   }
 
   @override
