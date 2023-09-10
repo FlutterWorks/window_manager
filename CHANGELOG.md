@@ -1,3 +1,41 @@
+### 0.3.6
+
+* [macos] Fix incorrect centering when multi-screen
+* [windows] feat: restore Windows 7 support (#388)
+* [windows] Better fullscreen implementation (#367)
+
+### 0.3.5
+
+* [macos] fixes setMinimumSize and setMaximumSize (#341)
+* [windows] Remove app cut at the bottom and force refresh when back from fullscreen (#359), Fixes #311, #266, #228, #355, #237
+* [linux] fix: on-close event handler not be triggered on flutter >= 3.10 (#343)
+* [linux] feat: Dock Window to Screen like Taskbar (#347)
+
+### 0.3.4
+
+* [macos] Fix blur and focus events when the MainFlutterWindow extends from NSPanel
+
+## 0.3.3
+
+* [macos] feat: setTitleBarStyle() restores window frame on Linux (#323)
+* [macos] Implement `isVisibleOnAllWorkspaces` & `setVisibleOnAllWorkspaces` methods
+
+## 0.3.2
+
+* [macos] Feature to set labeled badge on taskbar aka dock (#305)
+* [linux] remove the margins of the window frame (#318)
+* Add AlwaysOnBottom support for Windows (#306)
+* [Windows] make setMinimum/MaximumSize() dpi change awareable (#231)
+* remove frameless on set title bar style on macos (#240)
+* chore: Add windowButtonVisibility to WindowOptions
+
+## 0.3.1
+
+* [linux] avoid removing shadows if no title is set (#297)
+* [macos] Implement isMaximizable and setMaximizable (#290)
+* Don't crash if an event doesn't have a dedicated handler (#286)
+* Remove all subWindow related implementations
+
 ## 0.3.0
 
 * Add integration test (#275)

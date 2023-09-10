@@ -108,29 +108,32 @@ std::optional<LRESULT> WindowManagerPlugin::HandleWindowProc(HWND hWnd,
                                                              LPARAM lParam) {
   std::optional<LRESULT> result = std::nullopt;
 
-  if (message == WM_NCCALCSIZE) {
-    // This must always be first or else the one of other two ifs will execute
-    //  when window is in full screen and we don't want that
-    if (wParam && window_manager->IsFullScreen()) {
+  if (message == WM_DPICHANGED) {
+    window_manager->pixel_ratio_ = (float) LOWORD(wParam) / USER_DEFAULT_SCREEN_DPI;
+  }
+
+  if (wParam && message == WM_NCCALCSIZE && window_manager->title_bar_style_ != "normal") {
+    if (window_manager->IsFullScreen()) {
+      if (window_manager->is_frameless_) {
       NCCALCSIZE_PARAMS* sz = reinterpret_cast<NCCALCSIZE_PARAMS*>(lParam);
-      sz->rgrc[0].bottom -= 3;
+        sz->rgrc[0].left += 8;
+        sz->rgrc[0].top += 8;
+        sz->rgrc[0].right -= 8;
+        sz->rgrc[0].bottom -= 8;
+      }
       return 0;
     }
-
     // This must always be before handling title_bar_style_ == "hidden" so
-    //  the if TitleBarStyle.hidden doesn't get executed.
-    if (wParam && window_manager->is_frameless_) {
+    // the `if TitleBarStyle.hidden` doesn't get executed.
+    if (window_manager->is_frameless_) {
       NCCALCSIZE_PARAMS* sz = reinterpret_cast<NCCALCSIZE_PARAMS*>(lParam);
-      // Add borders when maximized so app doesn't get cut off.
       if (window_manager->IsMaximized()) {
+        // Add borders when maximized so app doesn't get cut off.
         sz->rgrc[0].left += 8;
         sz->rgrc[0].top += 8;
         sz->rgrc[0].right -= 8;
         sz->rgrc[0].bottom -= 9;
       }
-      // This cuts the app at the bottom by one pixel but that's necessary to
-      // prevent jitter when resizing the app
-      sz->rgrc[0].bottom += 1;
       return 0;
     }
 
@@ -163,13 +166,21 @@ std::optional<LRESULT> WindowManagerPlugin::HandleWindowProc(HWND hWnd,
     MINMAXINFO* info = reinterpret_cast<MINMAXINFO*>(lParam);
     // For the special "unconstrained" values, leave the defaults.
     if (window_manager->minimum_size_.x != 0)
-      info->ptMinTrackSize.x = window_manager->minimum_size_.x;
+      info->ptMinTrackSize.x =
+          static_cast<LONG> (window_manager->minimum_size_.x *
+          window_manager->pixel_ratio_);
     if (window_manager->minimum_size_.y != 0)
-      info->ptMinTrackSize.y = window_manager->minimum_size_.y;
+      info->ptMinTrackSize.y =
+          static_cast<LONG> (window_manager->minimum_size_.y *
+          window_manager->pixel_ratio_);
     if (window_manager->maximum_size_.x != -1)
-      info->ptMaxTrackSize.x = window_manager->maximum_size_.x;
+      info->ptMaxTrackSize.x =
+          static_cast<LONG> (window_manager->maximum_size_.x *
+          window_manager->pixel_ratio_);
     if (window_manager->maximum_size_.y != -1)
-      info->ptMaxTrackSize.y = window_manager->maximum_size_.y;
+      info->ptMaxTrackSize.y =
+          static_cast<LONG> (window_manager->maximum_size_.y *
+          window_manager->pixel_ratio_);
     result = 0;
   } else if (message == WM_NCACTIVATE) {
     if (wParam == TRUE) {
@@ -295,7 +306,15 @@ std::optional<LRESULT> WindowManagerPlugin::HandleWindowProc(HWND hWnd,
     } else {
       _EmitEvent("hide");
     }
+  } else if (message == WM_WINDOWPOSCHANGED) {
+    if (window_manager->IsAlwaysOnBottom()) {
+        const flutter::EncodableMap& args = {
+		  {flutter::EncodableValue("isAlwaysOnBottom"),
+            		   flutter::EncodableValue(true)}};
+	    window_manager->SetAlwaysOnBottom(args);
+	  }
   }
+  
   return result;
 }
 
@@ -366,6 +385,20 @@ void WindowManagerPlugin::HandleMethodCall(
   } else if (method_name.compare("restore") == 0) {
     window_manager->Restore();
     result->Success(flutter::EncodableValue(true));
+  } else if (method_name.compare("isDockable") == 0) {
+    bool value = window_manager->IsDockable();
+    result->Success(flutter::EncodableValue(value));
+  } else if (method_name.compare("isDocked") == 0) {
+    int value = window_manager->IsDocked();
+    result->Success(flutter::EncodableValue(value));
+  } else if (method_name.compare("dock") == 0) {
+    const flutter::EncodableMap& args =
+        std::get<flutter::EncodableMap>(*method_call.arguments());
+    window_manager->Dock(args);
+    result->Success(flutter::EncodableValue(true));
+  } else if (method_name.compare("undock") == 0) {
+    bool value = window_manager->Undock();
+    result->Success(flutter::EncodableValue(value));
   } else if (method_name.compare("isFullScreen") == 0) {
     bool value = window_manager->IsFullScreen();
     result->Success(flutter::EncodableValue(value));
@@ -444,6 +477,14 @@ void WindowManagerPlugin::HandleMethodCall(
         std::get<flutter::EncodableMap>(*method_call.arguments());
     window_manager->SetAlwaysOnTop(args);
     result->Success(flutter::EncodableValue(true));
+  } else if (method_name.compare("isAlwaysOnBottom") == 0) {
+    bool value = window_manager->IsAlwaysOnBottom();
+    result->Success(flutter::EncodableValue(value));
+  } else if (method_name.compare("setAlwaysOnBottom") == 0) {
+    const flutter::EncodableMap& args =
+        std::get<flutter::EncodableMap>(*method_call.arguments());
+    window_manager->SetAlwaysOnBottom(args);
+    result->Success(flutter::EncodableValue(true));
   } else if (method_name.compare("getTitle") == 0) {
     std::string value = window_manager->GetTitle();
     result->Success(flutter::EncodableValue(value));
@@ -520,7 +561,7 @@ void WindowManagerPlugin::HandleMethodCall(
   } else {
     result->NotImplemented();
   }
-}
+ }
 
 }  // namespace
 

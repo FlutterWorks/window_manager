@@ -107,12 +107,33 @@ public class WindowManagerPlugin: NSObject, FlutterPlugin {
         case "isMinimized":
             result(windowManager.isMinimized())
             break
+        case "isMaximizable":
+            result(windowManager.isMaximizable())
+            break
+        case "setMaximizable":
+            windowManager.setIsMaximizable(args)
+            result(true)
+            break
         case "minimize":
             windowManager.minimize()
             result(true)
             break
         case "restore":
             windowManager.restore()
+            result(true)
+            break
+        case "isDockable":
+            result(windowManager.isDockable())
+            break
+        case "isDocked":
+            result(windowManager.isDocked())
+            break
+        case "dock":
+            windowManager.dock(args)
+            result(true)
+            break
+        case "undock":
+            windowManager.undock()
             result(true)
             break
         case "isFullScreen":
@@ -201,8 +222,19 @@ public class WindowManagerPlugin: NSObject, FlutterPlugin {
             windowManager.setSkipTaskbar(args)
             result(true)
             break
+        case "setBadgeLabel":
+            windowManager.setBadgeLabel(args)
+            result(true)
+            break
         case "setProgressBar":
             windowManager.setProgressBar(args)
+            result(true)
+            break
+        case "isVisibleOnAllWorkspaces":
+            result(windowManager.isVisibleOnAllWorkspaces())
+            break
+        case "setVisibleOnAllWorkspaces":
+            windowManager.setVisibleOnAllWorkspaces(args)
             result(true)
             break
         case "hasShadow":
@@ -231,12 +263,6 @@ public class WindowManagerPlugin: NSObject, FlutterPlugin {
             windowManager.startDragging()
             result(true)
             break
-        case "isSubWindow":
-            result(windowManager.isSubWindow())
-            break
-        case "createSubWindow":
-            windowManager.createSubWindow(args);
-            result(true)
         default:
             result(FlutterMethodNotImplemented)
         }

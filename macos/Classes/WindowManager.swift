@@ -19,17 +19,33 @@ extension NSWindow {
             configured = true
         }
     }
+    
+    public func setStyleMask(_ on: Bool, _ flag: StyleMask) {
+        if (on) {
+            styleMask.insert(flag)
+        } else {
+            styleMask.remove(flag)
+        }
+    }
+    
+    public func setCollectionBehavior(_ on: Bool, _ flag: CollectionBehavior) {
+        if (on) {
+            collectionBehavior.insert(flag)
+        } else {
+            collectionBehavior.remove(flag)
+        }
+    }
 }
 
 extension NSRect {
     var topLeft: CGPoint {
         set {
-            let screenFrameRect = NSScreen.main!.frame
+            let screenFrameRect = NSScreen.screens[0].frame
             origin.x = newValue.x
             origin.y = screenFrameRect.height - newValue.y - size.height
         }
         get {
-            let screenFrameRect = NSScreen.main!.frame
+            let screenFrameRect = NSScreen.screens[0].frame
             return CGPoint(x: origin.x, y: screenFrameRect.height - origin.y - size.height)
         }
     }
@@ -51,6 +67,7 @@ public class WindowManager: NSObject, NSWindowDelegate {
     
     private var _isPreventClose: Bool = false
     private var _isMaximized: Bool = false
+    private var _isMaximizable: Bool = true
     
     override public init() {
         super.init()
@@ -87,6 +104,14 @@ public class WindowManager: NSObject, NSWindowDelegate {
     
     public func setPreventClose(_ args: [String: Any]) {
         _isPreventClose = args["isPreventClose"] as! Bool
+    }
+    
+    public func isMaximizable() -> Bool {
+        return _isMaximizable;
+    }
+    
+    public func setIsMaximizable(_ args: [String: Any]) {
+        _isMaximizable = args["isMaximizable"] as! Bool
     }
     
     public func focus() {
@@ -146,6 +171,22 @@ public class WindowManager: NSObject, NSWindowDelegate {
     
     public func restore() {
         mainWindow.deminiaturize(nil)
+    }
+
+    public func isDockable() -> Bool {
+        return false
+    }
+
+    public func isDocked() -> Int {
+        return 0;
+    }
+    
+    public func dock(_ args: [String: Any]) {
+        if (isDockable()) {}
+    }
+    
+    public func undock() {
+        if (isDockable()) {}
     }
     
     public func isFullScreen() -> Bool {
@@ -248,16 +289,16 @@ public class WindowManager: NSObject, NSWindowDelegate {
     
     public func setMinimumSize(_ args: [String: Any]) {
         let minSize: NSSize = NSSize(
-            width: CGFloat(args["width"] as! Float),
-            height: CGFloat(args["height"] as! Float)
+            width: CGFloat((args["width"] as! NSNumber).floatValue),
+            height: CGFloat((args["height"] as! NSNumber).floatValue)
         )
         mainWindow.minSize = minSize
     }
     
     public func setMaximumSize(_ args: [String: Any]) {
         let maxSize: NSSize = NSSize(
-            width: CGFloat(args["width"] as! Float),
-            height: CGFloat(args["height"] as! Float)
+            width: CGFloat((args["width"] as! NSNumber).floatValue),
+            height: CGFloat((args["height"] as! NSNumber).floatValue)
         )
         mainWindow.maxSize = maxSize
     }
@@ -317,6 +358,9 @@ public class WindowManager: NSObject, NSWindowDelegate {
     public func setAlwaysOnTop(_ args: [String: Any]) {
         let isAlwaysOnTop: Bool = args["isAlwaysOnTop"] as! Bool
         mainWindow.level = isAlwaysOnTop ? .floating : .normal
+        if (mainWindow is NSPanel) {
+            mainWindow.setStyleMask(isAlwaysOnTop, .nonactivatingPanel)
+        }
     }
     
     public func getTitle() -> String {
@@ -342,6 +386,12 @@ public class WindowManager: NSObject, NSWindowDelegate {
             mainWindow.styleMask.remove(.fullSizeContentView)
         }
         
+        mainWindow.isOpaque = false
+        mainWindow.hasShadow = true
+        
+        let titleBarView: NSView = (mainWindow.standardWindowButton(.closeButton)?.superview)!.superview!
+        titleBarView.isHidden = false
+        
         mainWindow.standardWindowButton(.closeButton)?.isHidden = !windowButtonVisibility
         mainWindow.standardWindowButton(.miniaturizeButton)?.isHidden = !windowButtonVisibility
         mainWindow.standardWindowButton(.zoomButton)?.isHidden = !windowButtonVisibility
@@ -360,6 +410,11 @@ public class WindowManager: NSObject, NSWindowDelegate {
     public func setSkipTaskbar(_ args: [String: Any]) {
         let isSkipTaskbar: Bool = args["isSkipTaskbar"] as! Bool
         NSApplication.shared.setActivationPolicy(isSkipTaskbar ? .accessory : .regular)
+    }
+    
+    public func setBadgeLabel(_ args: [String: Any]) {
+        let label: String = args["label"] as! String
+        NSApplication.shared.dockTile.badgeLabel = label
     }
     
     public func setProgressBar(_ args: [String: Any]) {
@@ -397,6 +452,18 @@ public class WindowManager: NSObject, NSWindowDelegate {
             progressIndicator.doubleValue = Double(progress)
         }
         dockTile.display()
+    }
+    
+    public func isVisibleOnAllWorkspaces() -> Bool {
+        return mainWindow.collectionBehavior.contains(.canJoinAllSpaces)
+    }
+    
+    public func setVisibleOnAllWorkspaces(_ args: [String: Any]) {
+        let visible: Bool = args["visible"] as! Bool
+        let visibleOnFullScreen: Bool = args["visibleOnFullScreen"] as! Bool
+        
+        mainWindow.setCollectionBehavior(visible, .canJoinAllSpaces)
+        mainWindow.setCollectionBehavior(visibleOnFullScreen, .fullScreenAuxiliary)
     }
     
     public func hasShadow() -> Bool {
@@ -449,51 +516,6 @@ public class WindowManager: NSObject, NSWindowDelegate {
         }
     }
     
-    public func isSubWindow() -> Bool {
-        let identifier: String = mainWindow.identifier?.rawValue ?? "";
-        return identifier == "subwindow"
-    }
-    
-    public func createSubWindow(_ args: [String: Any]) {
-        let visibleFrame = NSScreen.main!.visibleFrame
-        
-        var frameRect: NSRect = NSRect.zero
-        if (args["width"] != nil && args["width"] != nil) {
-            frameRect.size.width = CGFloat(args["width"] as! Float)
-            frameRect.size.height = CGFloat(args["height"] as! Float)
-        }
-        if (args["x"] != nil && args["y"] != nil) {
-            frameRect.topLeft.x = CGFloat(args["x"] as! Float)
-            frameRect.topLeft.y = CGFloat(args["y"] as! Float)
-        }
-        
-        let center: Bool = args["center"] as! Bool
-        let title: String = args["title"] as! String
-        
-        if (center) {
-            frameRect.origin.x = (visibleFrame.width / 2) - (frameRect.size.width / 2)
-            frameRect.origin.y = (visibleFrame.height / 2) + (frameRect.size.height / 2)
-        }
-        
-        let flutterViewController = FlutterViewController.init()
-        WindowManagerPlugin.RegisterGeneratedPlugins!(flutterViewController)
-        
-        let window = SubWindow()
-        window.identifier = NSUserInterfaceItemIdentifier("subwindow")
-        window.styleMask = NSWindow.StyleMask(rawValue: 0xf)
-        window.backingType = .buffered
-        
-        window.title = title
-        window.setFrameOrigin(frameRect.origin)
-        window.setContentSize(frameRect.size)
-        
-        let windowController = NSWindowController()
-        windowController.contentViewController = flutterViewController
-        windowController.shouldCascadeWindows = true
-        windowController.window = window
-        windowController.showWindow(self)
-    }
-    
     // NSWindowDelegate
     
     public func windowShouldClose(_ sender: NSWindow) -> Bool {
@@ -502,6 +524,14 @@ public class WindowManager: NSObject, NSWindowDelegate {
             return false
         }
         return true;
+    }
+    
+    public func windowShouldZoom(_ window: NSWindow, toFrame newFrame: NSRect) -> Bool {
+        _emitEvent("maximize")
+        if (isMaximizable()) {
+            return true
+        }
+        return false;
     }
     
     public func windowDidResize(_ notification: Notification) {
@@ -526,6 +556,18 @@ public class WindowManager: NSObject, NSWindowDelegate {
     
     public func windowDidMove(_ notification: Notification) {
         _emitEvent("moved")
+    }
+    
+    public func windowDidBecomeKey(_ notification: Notification) {
+        if (mainWindow is NSPanel) {
+            _emitEvent("focus");
+        }
+    }
+    
+    public func windowDidResignKey(_ notification: Notification) {
+        if (mainWindow is NSPanel) {
+            _emitEvent("blur");
+        }
     }
     
     public func windowDidBecomeMain(_ notification: Notification) {
